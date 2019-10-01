@@ -7,3 +7,4 @@ vcpkg
 build
 !lib/*.lib
 scripts/install.ps1
+scr/*.exe
