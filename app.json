@@ -1,11 +1,11 @@
 {
     "ret": 1,
     "apiver": 9,
-    "name": "Demo",
-    "version": "1.0.0",
+    "name": "Duckling Junior",
+    "version": "1.0.2.0",
     "version_id": 1,
-    "author": "Your Name",
-    "description": "这是 CoolQ C++ SDK 的一个 Demo。",
+    "author": "Duckling First",
+    "description": "A test.",
     "event": [
         {
             "id": 1003,
@@ -108,11 +108,15 @@
     ],
     "menu": [
         {
-            "name": "菜单 1",
-            "function": "menu_demo_1"
+            "name": "猜数字",
+            "function": "Number_Guess_Enable"
         },
         {
-            "name": "菜单 2",
+            "name": "捕捉四季",
+            "function": "Catch_SJJ_Enable"
+        },
+        {
+            "name": "menu2",
             "function": "menu_demo_2"
         }
     ],

@@ -1,1 +1,1 @@
-com.example.demo
+duckling.first.test
