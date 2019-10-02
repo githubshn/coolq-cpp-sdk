@@ -3,10 +3,8 @@
 #include<cstring>
 #include<ctime>
 #include "NumberGuess.cpp"
-
-// #define SJJ 204927320
-#define SJJ 1572264811
-#define SHN 2411393416
+#include<fstream>
+#include "ConstPara.cpp"
 
 using namespace std;
 void debug_print(string mess);
@@ -25,9 +23,13 @@ class Robot{
         Number_Guess *Number_Guess_ing;
         bool En_Number_Guess;
         bool En_Catch_SJJ;
+
+        Const_Para *cp;
+
         Robot(){
         }
-        void init(){
+        void init(Const_Para* _cp){
+            cp = _cp;
             En_Number_Guess = false;
             En_Catch_SJJ = false;
             Number_Guess_ing = NULL;
@@ -38,8 +40,11 @@ class Robot{
             cq::logging::debug("shn", "next");
             if (strmsg.find("小鸭子，")==0) {
                 cq::logging::debug("shn", "repeat");
-                msg = strmsg.substr(strlen("小鸭子，"));
-                cq::message::send(e.target, msg);
+                strmsg = strmsg.substr(strlen("小鸭子，"));
+                if (strcmp(strmsg.c_str(), "const_para")==0) {
+                    cp->show(e.target);
+                }
+                cq::message::send(e.target, strmsg);
             }
             return;
         }
@@ -122,8 +127,8 @@ inline void debug_print(int mess) {
     cq::logging::debug("Debug", string(str));
 }
 
-
 Robot agent;
+Const_Para cp;
 
 // 插件入口，在静态成员初始化之后，app::on_initialize 事件发生之前被执行，用于配置 SDK 和注册事件回调
 CQ_MAIN {
@@ -131,7 +136,8 @@ CQ_MAIN {
         // cq::logging、cq::api、cq::dir 等命名空间下的函数只能在事件回调函数内部调用，而不能直接在 CQ_MAIN 中调用
         debug_print("The plug-in components is enabled!");
         // cq::logging::debug(u8"启用", u8"插件已启动");
-        agent.init();
+        agent.init(&cp);
+        cp.update();
     };
 
     cq::app::on_disable = [] {
@@ -164,12 +170,12 @@ CQ_MAIN {
         const auto memlist = cq::api::get_group_member_list(e.group_id); // 获取数据接口
         cq::Message msg = "debug : group:" + std::to_string(e.group_id) + " from:" + std::to_string(e.user_id); 
         // msg.send(cq::Target::user(649310342));
-        if (e.user_id==SJJ){
+        if (e.user_id==cp._SJJ){
             cq::logging::debug("sjj", "response to SJJ");
             // cq::message::send(e.target, msg);
             agent.response_to_sjj(e);
             return;
-        } else if (e.user_id==SHN){
+        } else if (e.user_id==cp._SHN){
             agent.response_to_shn(e);
         }
         // msg = "group:" + std::to_string(e.group_id) + " from:" + std::to_string(e.user_id); // Message 类可以进行加法运算
