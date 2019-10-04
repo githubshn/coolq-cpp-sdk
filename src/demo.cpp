@@ -2,9 +2,12 @@
 #include<string>
 #include<cstring>
 #include<ctime>
-#include "NumberGuess.cpp"
 #include<fstream>
+#include<time.h>
+#include "NumberGuess.cpp"
 #include "ConstPara.cpp"
+#include "Command.cpp"
+#include "QuestionAnswer.cpp"
 
 using namespace std;
 void debug_print(string mess);
@@ -25,14 +28,64 @@ class Robot{
         bool En_Catch_SJJ;
 
         Const_Para *cp;
+        Question_Answer *qa;
 
         Robot(){
         }
-        void init(Const_Para* _cp){
+        void init(Const_Para* _cp, Question_Answer* _qa){
             cp = _cp;
+            qa = _qa;
             En_Number_Guess = false;
             En_Catch_SJJ = false;
             Number_Guess_ing = NULL;
+        }
+        void qa_response(string strmsg, const cq::GroupMessageEvent &e){
+            QA_Node* qa_response = qa->response(strmsg.c_str());
+            if (qa_response){
+                srand((unsigned)time(0));
+                int tot = qa_response->link.size();
+                debug_print(tot);
+                if (tot==0) return;
+                int ran = rand()%tot;
+                debug_print(ran);
+                auto i = qa_response->link.begin();
+                for(; ran!=0 && i!=qa_response->link.end(); ran--,i++);
+                if (i!=qa_response->link.end()){
+                    cq::message::send(e.target, (*i)->context);
+                }
+            }
+        }
+        int qa_teaching(Command &c, const cq::GroupMessageEvent &e){
+            for (auto i=c.flags.begin(); i!=c.flags.end(); i++){
+                if (strcmp((*i), "s")==0){
+                    qa->data_copy();
+                    cq::message::send(e.target, "已保存");
+                    qa->clear_tmp();
+                    return 0;
+                } else if (strcmp((*i), "update")==0){
+                    qa->init();
+                    cq::message::send(e.target, "更新完成");
+                    return 0;
+                }
+                return -10001;  // unknown flags
+            }
+            if (c.args_c<2) {
+                return -10002;  // too few args
+            } else if (c.args_c>2) {
+                return -10003; // too many args
+            }
+            qa->teach(c.args[0], c.args[1]);
+            cq::message::send(e.target, "学会啦！");
+            return 0;
+        }
+        int execute_command(Command &c, const cq::GroupMessageEvent &e){
+            if (strcmp(c.command, "constpara")==0){
+                cp->show(e.target);
+            } else if(strcmp(c.command, "teach")==0){
+                return qa_teaching(c, e);
+            }else {
+                return -1;
+            }
         }
         void response_to_shn(const cq::GroupMessageEvent &e) {
             cq::Message msg = e.message;
@@ -41,10 +94,47 @@ class Robot{
             if (strmsg.find("小鸭子，")==0) {
                 cq::logging::debug("shn", "repeat");
                 strmsg = strmsg.substr(strlen("小鸭子，"));
-                if (strcmp(strmsg.c_str(), "const_para")==0) {
-                    cp->show(e.target);
+                Command c(strmsg.c_str());
+                int ret = execute_command(c, e);
+                switch(ret){
+                    case 0:
+                        // success
+                        break;
+                    case -1:
+                        cq::message::send(e.target, "未知命令");
+                        cq::message::send(e.target, strmsg);
+                        break;
+                    case -10001:
+                        cq::message::send(e.target, "未知开关");
+                        break;
+                    case -10002:
+                        cq::message::send(e.target, "缺少参数");
+                        break;
+                    case -10003:
+                        cq::message::send(e.target, "过多参数");
+                        break;
                 }
-                cq::message::send(e.target, strmsg);
+                // if (strcmp(strmsg.c_str(), "constpara")==0) {
+                //     cp->show(e.target);
+                // } else {
+                //     cq::message::send(e.target, strmsg);
+                // }
+            } else {
+                qa_response(strmsg, e);
+                // QA_Node* qa_response = qa->response(strmsg.c_str());
+                // if (qa_response){
+                //     srand((unsigned)time(0));
+                //     int tot = qa_response->link.size();
+                //     debug_print(tot);
+                //     if (tot==0) return;
+                //     int ran = rand()%tot;
+                //     debug_print(ran);
+                //     auto i = qa_response->link.begin();
+                //     for(; ran!=0 && i!=qa_response->link.end(); ran--,i++);
+                //     if (i!=qa_response->link.end()){
+                //         cq::message::send(e.target, (*i)->context);
+                //     }
+                // }
             }
             return;
         }
@@ -129,6 +219,7 @@ inline void debug_print(int mess) {
 
 Robot agent;
 Const_Para cp;
+Question_Answer qa("D:\\coolq-data\\QA_data.txt", "D:\\coolq-data\\QA_data_tmp.txt");
 
 // 插件入口，在静态成员初始化之后，app::on_initialize 事件发生之前被执行，用于配置 SDK 和注册事件回调
 CQ_MAIN {
@@ -136,8 +227,9 @@ CQ_MAIN {
         // cq::logging、cq::api、cq::dir 等命名空间下的函数只能在事件回调函数内部调用，而不能直接在 CQ_MAIN 中调用
         debug_print("The plug-in components is enabled!");
         // cq::logging::debug(u8"启用", u8"插件已启动");
-        agent.init(&cp);
+        agent.init(&cp, &qa);
         cp.update();
+        qa.init();
     };
 
     cq::app::on_disable = [] {
@@ -177,7 +269,9 @@ CQ_MAIN {
             return;
         } else if (e.user_id==cp._SHN){
             agent.response_to_shn(e);
+            return;
         }
+        agent.qa_response(to_string(e.message), e);
         // msg = "group:" + std::to_string(e.group_id) + " from:" + std::to_string(e.user_id); // Message 类可以进行加法运算
         // cq::message::send(e.target, msg); // 使用 message 命名空间的 send 函数
         // if (e.user_id==2411393416 && e.group_id!=250253824) cq::message::send(e.target, msg);

@@ -16,7 +16,7 @@ class Const_Para {
             try{
                 file.open("d:\\coolq-data\\para.txt", ios::in);
                 unsigned long t;
-                char str[10];
+                char str[12];
                 while (!file.eof()) {
                     file>>str>>t;
                     if (strcmp(str, "shn")==0) {
@@ -33,15 +33,16 @@ class Const_Para {
                 _SJJ = 1572264811;
                 _SELF = 2467043105;
             }
+            file.close();
         }
         void show(const cq::Target &t) {
             string msg = "";
-            char num[20];
-            itoa(_SHN, num, 10);
+            char num[40];
+            ultoa(_SHN, num, 10);
             msg += "SHN: " + string(num) + '\n';
-            itoa(_SJJ, num, 10);
+            ultoa(_SJJ, num, 10);
             msg += "SJJ: " + string(num) + '\n';
-            itoa(_SELF, num, 10);
+            ultoa(_SELF, num, 10);
             msg += "SELF: " + string(num) + '\n';
             cq::message::send(t, msg);
         }
