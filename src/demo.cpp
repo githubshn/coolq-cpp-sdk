@@ -4,10 +4,12 @@
 #include<ctime>
 #include<fstream>
 #include<time.h>
+//  My Classes
 #include "NumberGuess.cpp"
 #include "ConstPara.cpp"
 #include "Command.cpp"
 #include "QuestionAnswer.cpp"
+#include "MyTimer.cpp"
 
 using namespace std;
 void debug_print(string mess);
@@ -55,6 +57,16 @@ class Robot{
                 }
             }
         }
+        int qa_print_question(QA_Node* q, const cq::GroupMessageEvent &e){
+            if (!q) return 1;
+            string msg = "";   //  No such question
+            int order = 1;
+            for(auto i=q->link.begin(); i!=q->link.end(); i++, order++){
+                msg += string((*i)->context) + "\n";
+            }
+            cq::message::send(e.target, msg);
+            return 0;
+        }
         int qa_teaching(Command &c, const cq::GroupMessageEvent &e){
             for (auto i=c.flags.begin(); i!=c.flags.end(); i++){
                 if (strcmp((*i), "s")==0){
@@ -65,6 +77,20 @@ class Robot{
                 } else if (strcmp((*i), "update")==0){
                     qa->init();
                     cq::message::send(e.target, "更新完成");
+                    return 0;
+                } else if (strcmp((*i), "d")==0){
+                    if (c.args_c<2) {
+                        return -10002;  // too few args
+                    } else if (c.args_c>2) {
+                        return -10003; // too many args
+                    }
+                    int ret = qa->remove(c.args[0], c.args[1]);
+                    if (ret==1) return -10004;
+                    if (ret==2) return -10005;
+                    return 0;
+                } else if (strcmp((*i), "fq")==0){
+                    int ret = qa_print_question(qa->response(c.args[0]), e);
+                    if(ret==1) return -10004;
                     return 0;
                 }
                 return -10001;  // unknown flags
@@ -83,8 +109,10 @@ class Robot{
                 cp->show(e.target);
             } else if(strcmp(c.command, "teach")==0){
                 return qa_teaching(c, e);
+            }else if (strcmp(c.command, "repeat")==0){
+                return 10000;
             }else {
-                return -1;
+                return 10000;//未知命令当复读
             }
         }
         void response_to_shn(const cq::GroupMessageEvent &e) {
@@ -102,7 +130,6 @@ class Robot{
                         break;
                     case -1:
                         cq::message::send(e.target, "未知命令");
-                        cq::message::send(e.target, strmsg);
                         break;
                     case -10001:
                         cq::message::send(e.target, "未知开关");
@@ -113,6 +140,14 @@ class Robot{
                     case -10003:
                         cq::message::send(e.target, "过多参数");
                         break;
+                    case -10004:
+                        cq::message::send(e.target, "未找到问题");
+                        break;
+                    case -10005:
+                        cq::message::send(e.target, "未找到回答");
+                        break;
+                    case 10000:
+                        cq::message::send(e.target, strmsg);
                 }
                 // if (strcmp(strmsg.c_str(), "constpara")==0) {
                 //     cp->show(e.target);
@@ -147,6 +182,12 @@ class Robot{
             if (En_Catch_SJJ) {
                 if (strmsg.find("没人了？那我喵一声应该不会被发现")!=strmsg.npos) {
                     msg = "抓住一只野生的喵！";
+                    cq::message::send(e.target, msg);
+                } else if (strmsg.find("CQ:image,file=106F2925C7AF2EF4330169B143A89EF1.png")!=strmsg.npos) {
+                    msg = "戳！";
+                    cq::message::send(e.target, msg);
+                } else if (strmsg.find("嗯？怎么冷群了？")!=strmsg.npos) {
+                    msg = "只剩下AI了，悲惨吧。。。";
                     cq::message::send(e.target, msg);
                 }
             }

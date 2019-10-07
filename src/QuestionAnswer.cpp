@@ -157,20 +157,6 @@ class Question_Answer {
 		static bool QA_Lesser(const QA_Node* a, const QA_Node* b){
 			return strcmp(a->context, b->context)<0;
 		}
-//		void merge(char* file1, char* file2){
-//			fstream file1, file2;
-//			file1.open(file1, ios::out|ios::app);
-//			file2.open(file2, ioe::in);
-//			while(!file2.eof()){
-//				char context[Context_Size];
-//				file2.getline(context, Context_Size);
-//				if (strlen(context)>0){
-//					file1<<context<<"\n";
-//				}
-//			}
-//			file1.close();
-//			file2.close();
-//		}
 }; 
 
 // int main() {
